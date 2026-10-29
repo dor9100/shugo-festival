@@ -8,14 +8,19 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createSkyDome, FOG_COLOR, SUN_DIR } from './sky.js';
 
+// maxPixels caps the drawing buffer (a 4K screen renders at most ~1440p on high): with another 3D app (e.g. the
+// real game) holding the GPU and most of its memory, big MSAA float targets cause multi-100 ms stalls.
 const QUALITY = {
-  high: { maxDpr: 2, shadows: true, shadowMap: 2048, bloom: true, samples: 4 },
-  medium: { maxDpr: 1.5, shadows: true, shadowMap: 1024, bloom: true, samples: 2 },
-  low: { maxDpr: 1, shadows: false, shadowMap: 512, bloom: false, samples: 0 },
+  high: { maxPixels: 2560 * 1440, shadows: true, shadowMap: 2048, bloom: true, samples: 4 },
+  medium: { maxPixels: 1920 * 1080, shadows: true, shadowMap: 1024, bloom: true, samples: 2 },
+  low: { maxPixels: 1920 * 1080, shadows: false, shadowMap: 512, bloom: false, samples: 0 },
+  potato: { maxPixels: 1280 * 720, shadows: false, shadowMap: 512, bloom: false, samples: 0 },
 };
+export const QUALITY_LEVELS = Object.keys(QUALITY);
 
 export function createRenderer(container = document.body) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', stencil: false });
+  // no default-framebuffer MSAA: the composer target does the AA, and a 4K multisampled backbuffer wastes ~250 MB
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -120,7 +125,7 @@ export function createRenderer(container = document.body) {
 
   function resize() {
     const [w, h] = size();
-    const dpr = Math.min(window.devicePixelRatio || 1, q.maxDpr);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(q.maxPixels / Math.max(1, w * h)));
     renderer.setPixelRatio(dpr);
     renderer.setSize(w, h, true);
     composer.setPixelRatio(dpr);

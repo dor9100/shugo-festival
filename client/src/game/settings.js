@@ -28,7 +28,7 @@ export const settings = (() => {
     stored = {};
   }
   const s = { ...DEFAULTS, ...stored };
-  if (!['high', 'medium', 'low'].includes(s.quality)) s.quality = 'high';
+  if (!['high', 'medium', 'low', 'potato'].includes(s.quality)) s.quality = 'high';
   s.sensitivity = Math.min(3, Math.max(0.2, Number(s.sensitivity) || 1));
   s.volume = Math.min(1, Math.max(0, Number(s.volume)));
   if (!Number.isFinite(s.volume)) s.volume = DEFAULTS.volume;

@@ -10,6 +10,7 @@ import { MainMenu } from './ui/menu.js';
 import { settings, setSettings, loadName, saveName } from './game/settings.js';
 import { audio } from './game/audio.js';
 import { toast } from './ui/toast.js';
+import { AutoQuality } from './game/autoQuality.js';
 import { installButtonBlur } from './ui/dom.js';
 import { ROOM_CODE_LEN } from '@shared/config.js';
 
@@ -26,7 +27,8 @@ installButtonBlur(uiEl);
 // ---- world (created once, reused across rooms)
 loadMascotAssets(); // mascots attach their bodies once the clip GLB is loaded
 const view = createRenderer(worldEl);
-view.setQuality(settings.quality);
+const autoQuality = new AutoQuality({ apply: (q) => view.setQuality(q), notify: (msg) => toast(msg, 3500), renderer: view.renderer });
+autoQuality.reset(settings.quality);
 const arena = createArena(view.scene);
 const effects = new Effects(view.scene);
 const world = { scene: view.scene, camera: view.camera, effects };
@@ -38,7 +40,7 @@ let game = null;
 
 function setQuality(q) {
   setSettings({ quality: q });
-  view.setQuality(q);
+  autoQuality.reset(q);
 }
 
 function toggleMute(force) {
@@ -124,6 +126,7 @@ if (!forcedMode) {
 let last = performance.now();
 function loop(t) {
   requestAnimationFrame(loop);
+  autoQuality.frame(t - last, t);
   let dt = (t - last) / 1000;
   last = t;
   if (!(dt > 0)) dt = 0;
@@ -153,4 +156,4 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') last = performance.now();
 });
 
-window.__app = { menu, world, orbit, input, audio, get game() { return game; } };
+window.__app = { menu, world, orbit, input, audio, autoQuality, get game() { return game; } };

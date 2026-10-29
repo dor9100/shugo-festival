@@ -187,7 +187,8 @@ export class EscMenu {
     this.muteBox.addEventListener('change', () => actions.setMuted(this.muteBox.checked));
     this.popups = h('input', { type: 'checkbox', checked: settings.practicePopups });
     this.popups.addEventListener('change', () => setSettings({ practicePopups: this.popups.checked }));
-    this.quality = h('select', {}, ...['high', 'medium', 'low'].map((q) => h('option', { value: q, text: q[0].toUpperCase() + q.slice(1) })));
+    const QNAME = { high: 'High', medium: 'Medium', low: 'Low', potato: 'Lowest' };
+    this.quality = h('select', {}, ...Object.keys(QNAME).map((q) => h('option', { value: q, text: QNAME[q] })));
     this.quality.value = settings.quality;
     this.quality.addEventListener('change', () => actions.setQuality(this.quality.value));
     this.el = h(
@@ -201,7 +202,7 @@ export class EscMenu {
         this.vol.row,
         this.music.row,
         h('label.setting.check', {}, h('span', { text: 'Mute all sound' }), this.muteBox, h('span.val', { text: 'M' })),
-        h('label.setting', {}, h('span', { text: 'Graphics quality' }), this.quality, h('span.val')),
+        h('label.setting', {}, h('span', { text: 'Graphics quality (max, lowered automatically if FPS drops; F3 shows FPS)' }), this.quality, h('span.val')),
         h('label.setting.check', { title: 'Floating +50 / −20 numbers over heads and a red screen-edge pulse on laser hits. The real game shows neither.' }, h('span', { text: 'Practice popups (score numbers & hit vignette)' }), this.popups, h('span.val')),
         h('div.esc-actions', {}, h('button.btn', { type: 'button', text: 'Resume', onclick: () => this.show(false) }), h('button.btn.btn-danger', { type: 'button', text: 'Leave room', onclick: () => actions.leave() })),
         h('div.esc-controls', { text: 'WASD/arrows move · Space jump · drag (left/right mouse) orbit · wheel zoom · Q/E rotate · Tab scores · M mute' }),
