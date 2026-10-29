@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8" /><title>net harness</title></head>
+  <body>
+    <pre id="log">net harness</pre>
+    <!-- Test-only page: exposes the Session API to Playwright and records every message per session. -->
+    <script type="module">
+      import { R2C } from '@shared/protocol.js';
+      import { createRoom, detectMode, inviteLink, joinRoom } from '../../client/src/net/session.js';
+
+      const TYPES = [...Object.values(R2C), 'close'];
+      const sessions = [];
+
+      function track(s) {
+        const rec = { s, counts: {}, last: {}, events: [] };
+        for (const t of TYPES) {
+          s.on(t, (m) => {
+            rec.counts[t] = (rec.counts[t] || 0) + 1;
+            rec.last[t] = m;
+            if (t !== 'snap' && t !== 'pong') rec.events.push(m);
+          });
+        }
+        sessions.push(rec);
+        return sessions.length - 1;
+      }
+
+      const attempt = async (fn) => {
+        try {
+          return track(await fn());
+        } catch (e) {
+          return { error: e.message };
+        }
+      };
+
+      window.net = {
+        detectMode,
+        inviteLink,
+        create: (opts) => attempt(() => createRoom(opts)),
+        join: (opts) => attempt(() => joinRoom(opts)),
+        info(i) {
+          const { s, counts, last } = sessions[i];
+          return { you: s.you, code: s.code, mode: s.mode, isHost: s.isHost, ping: s.ping, now: s.now(), counts, last, welcome: s.welcome };
+        },
+        events: (i, type) => sessions[i].events.filter((m) => !type || m.t === type),
+        send: (i, msg) => sessions[i].s.send(msg),
+        close: (i) => sessions[i].s.close(),
+      };
+      document.getElementById('log').textContent = 'ready';
+      window.harnessReady = true;
+    </script>
+  </body>
+</html>

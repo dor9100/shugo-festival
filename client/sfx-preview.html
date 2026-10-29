@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jump Jump · sound board</title>
+<link rel="icon" href="data:," />
+<style>
+  :root {
+    --bg: #fff8ec; --ink: #3b2a1a; --muted: #8a7461; --card: #ffffff; --line: #f0dfc4;
+    --accent: #e8573f; --accent2: #2a9d8f; --gold: #f4b400; --pick: #2a9d8f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink);
+    background: radial-gradient(circle at 15% -10%, #ffe2b8 0, transparent 45%), radial-gradient(circle at 100% 0, #ffd6e0 0, transparent 40%), var(--bg);
+    min-height: 100vh;
+  }
+  header {
+    position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center;
+    padding: 14px 24px; background: rgba(255, 248, 236, 0.92); backdrop-filter: blur(6px); border-bottom: 2px dashed var(--line);
+  }
+  h1 { margin: 0; font-size: 20px; letter-spacing: 0.2px; }
+  h1 span { color: var(--accent); }
+  header .sp { flex: 1; }
+  header label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+  main { max-width: 1280px; margin: 0 auto; padding: 18px 24px 60px; }
+  .intro { color: var(--muted); margin: 0 0 16px; max-width: 900px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin: 26px 0 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 10px; box-shadow: 0 2px 0 #f3e2c8; }
+  .card h3 { margin: 0 0 2px; font-size: 16px; display: flex; align-items: baseline; gap: 8px; }
+  .card h3 code { font-size: 15px; }
+  .card h3 .picked { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--pick); }
+  .row { display: grid; grid-template-columns: 64px 1fr auto; gap: 4px 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .row.is-pick { background: linear-gradient(90deg, #e3f6f3, transparent 80%); border-radius: 8px; }
+  .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #fff; background: var(--gold); border-radius: 999px; padding: 2px 8px; justify-self: start; margin-top: 4px; }
+  .tag.main { background: var(--accent); }
+  .why { font-size: 13px; }
+  .src { font: 11.5px/1.35 ui-monospace, Consolas, monospace; color: var(--muted); word-break: break-all; margin-top: 2px; }
+  .btns { display: flex; gap: 6px; align-items: center; }
+  button {
+    font: inherit; font-size: 13px; cursor: pointer; border: 0; border-radius: 999px; padding: 6px 12px;
+    background: var(--accent2); color: #fff; font-weight: 600; white-space: nowrap;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.ghost { background: #f4ead9; color: var(--ink); }
+  button.playing { background: var(--accent); }
+  button.keep { background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 5px 10px; }
+  button.keep.on { background: var(--pick); color: #fff; border-color: var(--pick); }
+  .dur { font-size: 11px; color: var(--muted); text-align: right; }
+  #picks { width: 100%; min-height: 70px; font: 12px ui-monospace, Consolas, monospace; border-radius: 10px; border: 1px solid var(--line); padding: 8px; background: #fffdf8; }
+  .err { color: #b00020; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Jump Jump <span>sound board</span></h1>
+  <div class="sp"></div>
+  <label>Volume <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" /></label>
+  <button id="stop" class="ghost">■ Stop all</button>
+</header>
+<main>
+  <p class="intro">
+    Every slot in <code>public/sfx/manifest.json</code>: the main file (what the game plays) and its alternates.
+    Press ▶ to listen; tap <b>keep</b> on the one you like best per slot, then copy the list at the bottom and send it to us.
+    Music has a <b>seam</b> button: it starts 4 s before the end so you hear the loop wrap around.
+  </p>
+  <div id="app">Loading manifest…</div>
+  <h2>Your picks</h2>
+  <textarea id="picks" readonly></textarea>
+  <p><button id="copy" class="ghost">Copy picks</button> <button id="clear" class="ghost">Clear picks</button></p>
+</main>
+<script type="module">
+  const PICKS_KEY = 'jumpjump.sfxPicks';
+  const app = document.getElementById('app');
+  const vol = document.getElementById('vol');
+  let ctx = null, master = null;
+  const buffers = new Map();
+  const playing = new Set(); // {src, btn}
+  const picks = JSON.parse(localStorage.getItem(PICKS_KEY) || '{}');
+
+  function audio() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain();
+      master.gain.value = Number(vol.value);
+      master.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  vol.addEventListener('input', () => { if (master) master.gain.value = Number(vol.value); });
+
+  async function load(file) {
+    if (!buffers.has(file)) {
+      buffers.set(file, (async () => {
+        const res = await fetch(new URL(file, document.baseURI));
+        if (!res.ok) throw new Error(`${res.status} ${file}`);
+        return audio().decodeAudioData(await res.arrayBuffer());
+      })());
+    }
+    return buffers.get(file);
+  }
+
+  function stopAll() {
+    for (const p of playing) { try { p.src.stop(); } catch {} p.btn.classList.remove('playing'); }
+    playing.clear();
+  }
+  document.getElementById('stop').addEventListener('click', stopAll);
+
+  async function play(file, btn, { loop = false, seam = false } = {}) {
+    const c = audio();
+    const wasPlaying = btn.classList.contains('playing');
+    if (loop || wasPlaying) stopAll();
+    if (wasPlaying) return;
+    let buf;
+    try { buf = await load(file); } catch (e) { btn.textContent = '✕ failed'; btn.title = String(e); return; }
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.loop = loop;
+    src.connect(master);
+    const entry = { src, btn };
+    playing.add(entry);
+    btn.classList.add('playing');
+    src.onended = () => { playing.delete(entry); btn.classList.remove('playing'); };
+    src.start(0, seam ? Math.max(0, buf.duration - 4) : 0);
+  }
+
+  function el(tag, props = {}, ...kids) {
+    const n = Object.assign(document.createElement(tag), props);
+    for (const k of kids) if (k != null) n.append(k);
+    return n;
+  }
+
+  function renderPicks() {
+    const lines = Object.entries(picks).map(([slot, v]) => `${slot}: ${v}`);
+    document.getElementById('picks').value = lines.length ? lines.join('\n') : '(nothing picked yet: everything stays as the main file)';
+    document.querySelectorAll('[data-slot]').forEach((card) => {
+      const slot = card.dataset.slot;
+      card.querySelector('.picked').textContent = picks[slot] ? `keep: ${picks[slot]}` : '';
+      card.querySelectorAll('.row').forEach((r) => {
+        const on = picks[slot] === r.dataset.choice;
+        r.classList.toggle('is-pick', on);
+        r.querySelector('.keep').classList.toggle('on', on);
+      });
+    });
+    localStorage.setItem(PICKS_KEY, JSON.stringify(picks));
+  }
+
+  function row(slot, label, choice, item, isMusic) {
+    const btns = el('div', { className: 'btns' });
+    const playBtn = el('button', { textContent: isMusic ? '▶ loop' : '▶ play' });
+    playBtn.addEventListener('click', () => play(item.file, playBtn, { loop: isMusic }));
+    btns.append(playBtn);
+    if (isMusic) {
+      const seamBtn = el('button', { className: 'ghost', textContent: 'seam', title: 'start 4 s before the end and loop' });
+      seamBtn.addEventListener('click', () => play(item.file, seamBtn, { loop: true, seam: true }));
+      btns.append(seamBtn);
+    }
+    const keep = el('button', { className: 'keep', textContent: 'keep' });
+    keep.addEventListener('click', () => {
+      if (picks[slot] === choice) delete picks[slot]; else picks[slot] = choice;
+      renderPicks();
+    });
+    btns.append(keep);
+    const info = el('div', {},
+      el('div', { className: 'why', textContent: item.why || '' }),
+      el('div', { className: 'src', textContent: `${item.file}  ←  ${item.source}` }));
+    const r = el('div', { className: 'row' },
+      el('span', { className: label === 'main' ? 'tag main' : 'tag', textContent: label }),
+      info,
+      el('div', {}, btns, el('div', { className: 'dur', textContent: item.duration ? `${Number(item.duration).toFixed(2)} s` : '' })));
+    r.dataset.choice = choice;
+    return r;
+  }
+
+  async function init() {
+    let manifest;
+    try {
+      const res = await fetch(new URL('./sfx/manifest.json', document.baseURI), { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      manifest = await res.json();
+    } catch (e) {
+      app.replaceChildren(el('p', { className: 'err', textContent: `Could not load sfx/manifest.json (${e.message})` }));
+      return;
+    }
+    const sfx = el('div', { className: 'grid' });
+    const music = el('div', { className: 'grid' });
+    for (const [slot, item] of Object.entries(manifest)) {
+      const isMusic = slot.startsWith('music_');
+      const card = el('section', { className: 'card' },
+        el('h3', {}, el('code', { textContent: slot }), el('span', { className: 'picked' })));
+      card.dataset.slot = slot;
+      card.append(row(slot, 'main', 'main', item, isMusic));
+      (item.alts || []).forEach((alt, i) => card.append(row(slot, `alt ${i + 1}`, `alt ${i + 1} (${alt.file})`, alt, isMusic)));
+      (isMusic ? music : sfx).append(card);
+    }
+    app.replaceChildren(el('h2', { textContent: 'Sound effects' }), sfx, el('h2', { textContent: 'Music (loops)' }), music);
+    renderPicks();
+  }
+
+  document.getElementById('copy').addEventListener('click', async () => {
+    const t = document.getElementById('picks');
+    try { await navigator.clipboard.writeText(t.value); } catch { t.select(); document.execCommand('copy'); }
+  });
+  document.getElementById('clear').addEventListener('click', () => {
+    for (const k of Object.keys(picks)) delete picks[k];
+    renderPicks();
+  });
+  init();
+</script>
+</body>
+</html>

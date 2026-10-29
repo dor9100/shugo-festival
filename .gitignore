@@ -1,0 +1,8 @@
+node_modules/
+dist/
+test-results/
+*.log
+.DS_Store
+# research: keep only the written findings (videos/frames are third-party footage and huge)
+research/*
+!research/*.md

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rigged mascot preview</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe4f2; font-family: system-ui, 'Segoe UI', sans-serif; }
+      #app { position: fixed; inset: 0; }
+      #hud { position: fixed; left: 10px; top: 10px; z-index: 5; color: #fff; background: rgba(10, 20, 30, 0.62); padding: 8px 10px; border-radius: 8px;
+        font-size: 12px; line-height: 1.45; pointer-events: none; white-space: pre; max-width: 46vw; }
+      #hud b { color: #ffd76a; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud">loading…</div>
+    <script type="module" src="./src/anim/preview.js"></script>
+  </body>
+</html>

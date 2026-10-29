@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shugo Festival – World preview</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #9fd3f0;
+        font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      #hud {
+        position: fixed;
+        left: 10px;
+        top: 10px;
+        z-index: 10;
+        color: #fff;
+        font-size: 12px;
+        background: rgba(10, 20, 30, 0.55);
+        padding: 8px 10px;
+        border-radius: 8px;
+        max-width: 360px;
+        line-height: 1.5;
+        user-select: none;
+      }
+      #hud button {
+        font: inherit;
+        font-size: 11px;
+        margin: 2px 2px 0 0;
+        padding: 2px 7px;
+        border: 0;
+        border-radius: 4px;
+        background: #2b6f8a;
+        color: #fff;
+        cursor: pointer;
+      }
+      #hud button:hover {
+        background: #3a8fb0;
+      }
+      #hud .row {
+        margin-top: 4px;
+      }
+      #hud b {
+        color: #ffd84a;
+      }
+      body.shot #hud {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud">
+      <div><b>World preview</b> · <span id="fps">– fps</span></div>
+      <div id="gpu" style="opacity: 0.75; font-size: 10px"></div>
+      <div class="row">
+        View:
+        <button data-view="v2">game cam</button><button data-view="overview">overview</button><button data-view="low">low</button><button data-view="mascot">mascot</button
+        ><button data-view="corner">NPC</button><button data-view="top">top</button>
+      </div>
+      <div class="row">
+        Spawn:
+        <button data-trig="line">line</button><button data-trig="lines">lines</button><button data-trig="cross">cross</button
+        ><button data-trig="square">square</button><button data-trig="bomb">bomb</button><button data-trig="pink">pink</button
+        ><button data-trig="greens">greens</button><br />Slow tier: <button data-trig="line:slow">line</button><button data-trig="cross:slow">cross</button><button data-trig="square:slow">square</button>
+      </div>
+      <div class="row">
+        Quality: <button data-q="high">high</button><button data-q="medium">medium</button><button data-q="low">low</button>
+        <button id="auto">auto: on</button>
+      </div>
+    </div>
+    <script type="module" src="./src/world/preview.js"></script>
+  </body>
+</html>
